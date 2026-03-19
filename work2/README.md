@@ -37,5 +37,7 @@ python main.py
 - `ESC`：退出程序
 
 ## 动图演示
+预览时间较长，在homework_0319可查看
+
 
 ![3月19日作业演示](./homework_0319.gif)
