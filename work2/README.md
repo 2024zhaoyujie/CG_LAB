@@ -37,7 +37,8 @@ python main.py
 - `ESC`：退出程序
 
 ## 动图演示
-![triangle_mvp](https://github.com/user-attachments/assets/a99cfbbf-1e28-4dde-9523-681c8ad8aab5)
+![triangle_mvp_120f](https://github.com/user-attachments/assets/7ac500e4-9a02-432f-9fda-e18d0786b20a)
+
 ![cube_mvp](https://github.com/user-attachments/assets/1c8e16a3-69c1-46af-b3fd-a8a443bd3977)
 
 
