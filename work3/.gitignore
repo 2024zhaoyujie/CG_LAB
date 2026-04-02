@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+debug-ca3824.log
+imgui.ini
