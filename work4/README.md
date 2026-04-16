@@ -1,218 +1,173 @@
-# 实验报告：Phong 局部光照模型与光线投射（Taichi）
+# 计算机图形学实验报告：Phong 局部光照与光线投射（Taichi）
 
-> **公式说明：** 数学公式采用 **GitHub 支持的写法**：行内用 `$...$`，独立公式单独成段并用 `$$...$$`。**请勿**使用 `\(...\)`、`\[...\]`，否则在 GitHub 网页上通常无法渲染。
+**课程主页：** [https://zhanghongwen.cn/cg](https://zhanghongwen.cn/cg)  
+**实验名称：** Phong 光照模型（环境光 / 漫反射 / 镜面高光）与光线投射  
+**实现语言：** Python 3 + Taichi  
+**工程文件：** `phong_raytracing.py`、`pyproject.toml`、`run_phong.bat`  
 
-## 1. 实验信息
-
-- **实验主题**：Phong 光照模型（Ambient + Diffuse + Specular）与光线投射（Ray Casting）
-- **实现方式**：Taichi Kernel 逐像素发射射线，隐式定义几何体（球体 + 有限圆锥），最近交点深度竞争（Z-buffer 逻辑），Phong 着色；UI 通过滑块实时调参
-- **代码文件**：`phong_raytracing.py`
-- **依赖管理**：`uv` + `pyproject.toml`
-- **运行演示**：`C:\CG-Lab\屏幕录制 2026-04-16 182653.gif`
+> **公式排版：** 本文在 GitHub 上使用 `$…$`（行内）与单独成段的 `$$…$$`（块公式）。行内公式与中文括号之间保留空格，避免渲染歧义。
 
 ---
 
-## 2. 实验目标
+## 一、实验目的
 
-- **理论理解**：理解环境光（Ambient）、漫反射（Diffuse）、镜面高光（Specular）的物理含义与计算方式。
-- **数学基础**：掌握三维向量运算：归一化、点积、反射向量计算，法向量的求取与方向处理。
-- **工程实践**：用 Taichi 实现交互式渲染，实时修改材质参数，观察各项参数对视觉效果的影响。
+1. **理论：** 理解 Phong 局部光照模型中环境光、Lambert 漫反射与 Phong 镜面项的含义，以及三者线性叠加得到表面颜色的思路。  
+2. **数学：** 熟练运用向量归一化、点积、反射方向与法向量；理解「最近正交点」与遮挡关系。  
+3. **工程：** 使用 Taichi 编写逐像素 Kernel，完成射线与隐式几何求交、深度竞争与 Phong 着色；通过滑块实时调节 $K_a$、$K_d$、$K_s$ 与高光指数 $n$，观察画面变化。
 
 ---
 
-## 3. 实验原理
+## 二、实验原理
 
-Phong 光照模型将反射分为三部分并相加：
+总光强为三项之和：
 
 $$
 I = I_{ambient} + I_{diffuse} + I_{specular}
 $$
 
-### 3.1 环境光（Ambient）
+**环境光：**
 
 $$
-I_{ambient} = K_a \cdot C_{light} \cdot C_{object}
+I_{ambient} = K_a \cdot C_{light} \odot C_{object}
 $$
 
-用于模拟场景中多次反射后的均匀背景光。
-
-### 3.2 漫反射（Diffuse）
+**漫反射（Lambert）：**
 
 $$
-I_{diffuse} = K_d \cdot \max(0, \mathbf{N}\cdot\mathbf{L}) \cdot C_{light}\cdot C_{object}
+I_{diffuse} = K_d \cdot \max(0,\,\mathbf{N}\cdot\mathbf{L}) \cdot C_{light} \odot C_{object}
 $$
 
-满足 Lambert 定律：入射角越正对（$\mathbf{N}\cdot\mathbf{L}$ 越大），亮度越强；背光侧截断为 0。
-
-### 3.3 镜面高光（Specular）
+**镜面高光（Phong）：**
 
 $$
-I_{specular} = K_s \cdot \max(0, \mathbf{R}\cdot\mathbf{V})^n \cdot C_{light}
+I_{specular} = K_s \cdot \max(0,\,\mathbf{R}\cdot\mathbf{V})^{n} \cdot C_{light}
 $$
 
-其中：
+其中 $\mathbf{N}$、$\mathbf{L}$、$\mathbf{V}$ 均为单位向量；$\mathbf{L}$ 由表面指向光源，$\mathbf{V}$ 由表面指向相机；理想反射方向取
 
-- $\mathbf{N}$：交点处单位法向量  
-- $\mathbf{L}$：交点指向光源的单位向量  
-- $\mathbf{V}$：交点指向相机的单位向量  
-- $\mathbf{R}$：理想反射方向，$\mathbf{R} = 2(\mathbf{N}\cdot\mathbf{L})\mathbf{N} - \mathbf{L}$  
-- $n$：高光指数（Shininess），越大高光越「尖锐」
+$$
+\mathbf{R} = \mathrm{normalize}\bigl(2(\mathbf{N}\cdot\mathbf{L})\mathbf{N}-\mathbf{L}\bigr)
+$$
 
-### 3.4 数值稳定性与约束
-
-- $\mathbf{N}$、$\mathbf{L}$、$\mathbf{V}$ 必须归一化，否则亮度会失真、甚至出现全黑/噪点。
-- $\mathbf{N}\cdot\mathbf{L}$ 与 $\mathbf{R}\cdot\mathbf{V}$ 需要用 `max(0,·)` 截断，避免背光侧出现非法高光。
-- 颜色累加后可能超过 1.0，最终输出前需 clamp 到 $[0,1]$。
+$n$ 为 Shininess，越大高光越集中。实现中对 RGB 做分量 clamp 到 $[0,1]$，并对 $\mathbf{N}\cdot\mathbf{L}$、$\mathbf{R}\cdot\mathbf{V}$ 做非负截断；若 $\mathbf{N}\cdot\mathbf{V}<0$ 则将法线翻向观察者，减轻背面异常。
 
 ---
 
-## 4. 场景与参数设置
+## 三、实验环境与依赖
 
-### 4.1 摄像机与光源
-
-- **摄像机位置**：$(0,0,5)$
-- **点光源位置**：$(2,3,4)$
-- **光源颜色**：白色 $(1,1,1)$
-- **背景颜色**：深青色 $(0.02, 0.12, 0.15)$
-
-### 4.2 几何体（隐式定义）
-
-本实验不加载外部模型，采用数学隐式方程求交：
-
-1. **球体（红色）**
-   - 半径：`SPHERE_R = 0.5`
-   - 圆心：$(-0.45,-0.05,0)$（代码常量 `SPHERE_CX, SPHERE_CY, SPHERE_CZ`）
-   - 基础颜色：$(0.8,0.1,0.1)$
-
-2. **有限圆锥（紫色）**
-   - 顶点：$(0.45,0.55,0)$（代码常量 `CONE_AX, CONE_AY, CONE_AZ`）
-   - 底面平面：$y = -0.55$（`CONE_BASE_Y`）
-   - 底面半径：`CONE_R_BASE = 0.5`
-   - 基础颜色：$(0.6,0.2,0.8)$
-
-> 说明：为了画面更紧凑，本次将球和圆锥**缩小并向中心靠拢**（相较实验建议的 ±1.2 布置）。
+| 项目 | 说明 |
+|------|------|
+| Python | **3.10～3.12**（`pyproject.toml` 约束；Taichi 暂无稳定 3.14 轮子） |
+| 包管理 | `uv`（`uv sync` / `uv run`） |
+| 核心库 | `taichi`、`matplotlib`（后者为备用 UI） |
+| Taichi 架构 | 默认 **CPU**；纯英文路径下可设环境变量 `TI_ARCH=vulkan` 或 `TI_ARCH=cuda` 尝试 GPU |
 
 ---
 
-## 5. 实现方法与关键步骤
+## 四、场景与几何参数（与代码一致）
 
-### 5.1 光线投射（Ray Casting）
+本实验**不加载外部模型**，在 Kernel 内用隐式曲面求交。
 
-对每个像素 $(i,j)$：
+| 对象 | 参数 | 数值 / 常量名 |
+|------|------|----------------|
+| 相机 | 位置 | $(0,0,5)$ |
+| 点光源 | 位置 / 颜色 | $(2,3,4)$，白色 $(1,1,1)$ |
+| 背景色 | RGB | $(0.02,0.12,0.15)$ |
+| 红球 | 半径 / 球心 | `SPHERE_R=0.5`，圆心 $(-0.45,-0.05,0)$ |
+| 紫圆锥 | 顶点 | $(0.45,0.55,0)$ |
+| 紫圆锥 | 底面 | 平面 $y=-0.55$（`CONE_BASE_Y`），底半径 `CONE_R_BASE=0.5` |
+| 圆锥形状 | 斜率 | `CONE_K = CONE_R_BASE / CONE_H`，侧壁用二次方程 + 高度裁剪 |
 
-1. 计算归一化屏幕坐标 $(u,v)$ 并换算成视平面点 `target=(sx,sy,0)`  
-2. 射线：  
-   - 起点 $\mathbf{o} = (0,0,5)$  
-   - 方向 $\mathbf{d} = \mathrm{normalize}(\mathbf{target}-\mathbf{o})$
-
-### 5.2 求交与深度竞争（Z-buffer 逻辑）
-
-对同一条射线分别计算：
-
-- `t_s`：球体最近正交点距离  
-  - 解二次方程，取最小的正根  
-- `t_c`：有限圆锥最近正交点距离  
-  - **侧壁**：解二次方程并限制在顶点到基底之间的有限高度范围  
-  - **底面圆盘**：与平面 $y=-0.55$（代码常量 `CONE_BASE_Y`）求交，并判断是否落在圆盘半径内
-
-最后取 `min(t_s, t_c)` 作为真正可见的交点（若两者都无交点则使用背景色），实现正确遮挡关系。
-
-### 5.3 法向量计算
-
-**球面法线**
-
-$$
-\mathbf{N}=\mathrm{normalize}(\mathbf{P}-\mathbf{C})
-$$
-
-**圆锥侧壁法线**
-
-对隐式函数（局部坐标中带撇的量为相对圆锥轴/顶点的表达；GitHub 公式里用 `\prime` 避免与 Markdown 引号冲突）：
-
-$$
-F(x^{\prime},y^{\prime},z^{\prime})=(x^{\prime})^2+(z^{\prime})^2-k^2(y^{\prime})^2
-$$
-
-使用梯度作为法向量：
-
-$$
-\nabla F=\left(2x^{\prime},\,-2k^2y^{\prime},\,2z^{\prime}\right)
-$$
-
-再对 $\nabla F$ 归一化得到单位法向量。
-
-**圆锥底面法线**
-
-$$
-(0,-1,0)
-$$
-
-此外，为了避免背面导致高光方向异常，若 $\mathbf{N}\cdot\mathbf{V}<0$ 则翻转法线（让法线朝向观察者）。
-
-### 5.4 Phong 着色
-
-对最近交点 $\mathbf{P}$：
-
-- $\mathbf{L}=\mathrm{normalize}(\mathbf{LightPos}-\mathbf{P})$
-- $\mathbf{V}=\mathrm{normalize}(\mathbf{Cam}-\mathbf{P})$
-- $\mathbf{R}=\mathrm{normalize}(2(\mathbf{N}\cdot\mathbf{L})\mathbf{N}-\mathbf{L})$
-
-计算 `ambient + diffuse + specular`，并 clamp 到 $[0,1]$ 输出到像素。
+球与锥在 $x$ 上大致对称并略向视口中心收拢，便于同屏观察遮挡与高光。
 
 ---
 
-## 6. UI 交互与运行展示
+## 五、算法与实现要点
 
-### 6.1 滑块参数
+### 5.1 光线投射
 
-提供 4 个滑块并与材质参数绑定（范围与默认值符合实验要求）：
+对每个像素 $(i,j)$，将像素映射到归一化设备坐标，再映射到 $z=0$ 视平面上的点 `target`，射线为
 
-- **Ka**：0.0 ~ 1.0，默认 0.2  
-- **Kd**：0.0 ~ 1.0，默认 0.7  
-- **Ks**：0.0 ~ 1.0，默认 0.5  
-- **Shininess**：1.0 ~ 128.0，默认 32.0  
+$$
+\mathbf{o}=(0,0,5),\quad \mathbf{d}=\mathrm{normalize}(\mathbf{target}-\mathbf{o})
+$$
 
-### 6.2 UI 实现说明（Windows 兼容）
+与课程常见的「过像素射向成像平面」一致。
 
-在 Windows + **中文路径**下，Taichi `ti.ui`（GGUI/Vulkan）存在着色器 `.spv` 文件加载失败的问题。为保证实验可运行，本实现采取：
+### 5.2 求交
 
-- 若检测到当前工作目录包含非 ASCII 字符，则自动使用 **Matplotlib(TkAgg) + Slider** 作为交互界面；
-- 启动时会输出并保存一帧预览 `phong_preview.png` 以便核验渲染正确性；
-- 若将工程移动到纯英文路径，可切回 `ti.ui` 界面。
+- **球：** 将 $\lVert \mathbf{o}+t\mathbf{d}-\mathbf{C}\rVert^2=R^2$ 化为关于 $t$ 的一元二次方程，取**最小正根**作为入射前表面交点。  
+- **有限圆锥：** 以顶点为原点、轴沿 $-y$，将圆锥写为 $x'^2+z'^2=k^2y'^2$ 形式（$k=\tan\theta$ 由底半径与锥高导出），对射线解二次方程；用 `try_cone_t` 将 $t$ 限制在顶点到底面之间；**底面圆盘**与 $y=\texttt{CONE\_BASE\_Y}$ 求交并检验落在底圆内。
 
-### 6.3 运行结果（GIF 说明）
+### 5.3 深度竞争
 
-录屏 `屏幕录制 2026-04-16 182653.gif` 显示：
+分别得到球的 $t_s$ 与锥的 $t_c$ 后，取**较小正距离**对应表面着色，等价于光线意义下的最近表面 / Z-buffer 思想，保证遮挡正确。
 
-- 画面包含红色球体与紫色圆锥，具备清晰的漫反射明暗过渡与镜面高光点/条带；
-- 拖动 **Ka/Kd/Ks/Shininess** 滑块后，亮度与高光形状实时变化，符合 Phong 模型预期：
-  - Ka 增大 → 整体更亮（阴影处也抬升）
-  - Kd 增大 → 明暗对比增强（受 $\mathbf{N}\cdot\mathbf{L}$ 控制）
-  - Ks 增大 → 高光更强更明显
-  - Shininess 增大 → 高光更尖锐、更集中
+### 5.4 法向量与 Phong
+
+- 球面：$\mathbf{N}=\mathrm{normalize}(\mathbf{P}-\mathbf{C})$。  
+- 锥面：对 $F=x'^2+z'^2-k^2y'^2$ 求梯度并归一化；底面用法向量 $(0,-1,0)$。  
+- 在 `phong_color` 中计算 $\mathbf{L}$、$\mathbf{V}$、$\mathbf{R}$ 与三项光照，最后 `min(max(col,0),1)` 输出。
 
 ---
 
-## 7. 环境与运行方式
+## 六、交互界面与参数
 
-### 7.1 环境说明
+| 滑块 | 范围 | 默认值 | 含义 |
+|------|------|--------|------|
+| Ka | $[0,1]$ | $0.2$ | 环境光系数 |
+| Kd | $[0,1]$ | $0.7$ | 漫反射系数 |
+| Ks | $[0,1]$ | $0.5$ | 镜面系数 |
+| Shininess | $[1,128]$ | $32$ | 高光指数 $n$ |
 
-- Python：3.12（原因：Taichi 暂不提供 Python 3.14 的可用发行包）
-- 依赖：`taichi`, `matplotlib`
+参数存放在 Taichi 标量场 `params` 中，由 UI 回写后每帧调用 `render()`。
 
-### 7.2 运行命令
+### 6.1 双前端策略（Windows 实践）
 
-在项目目录执行：
+在 **工作目录含中文等非 ASCII 路径** 时，Taichi **GGUI（Vulkan）** 常出现 `.spv` 着色器加载或 `set_image` 失败。本工程默认策略为：
+
+- **路径含非 ASCII：** 直接使用 **Matplotlib（TkAgg）+ Slider**，避免先弹不可用窗口；启动后保存一帧 `phong_preview.png` 便于核对渲染。  
+- **路径为纯英文：** 可走 `ti.ui`；也可通过环境变量 **`PHONG_FORCE_TAICHI_UI=1`** 强制尝试 Taichi 窗口。  
+- 默认 Taichi 后端为 **CPU**（`TI_ARCH` 未设置时），利于在受限环境下稳定跑通实验。
+
+---
+
+## 七、编译与运行
+
+在 `work4` 目录下：
 
 ```bash
 uv sync
 uv run python phong_raytracing.py
 ```
 
-也可直接双击 `run_phong.bat`。
+或在 Windows 下双击 **`run_phong.bat`**。
+
+**演示动图：** 仓库内同目录的 [`demo.gif`](demo.gif)（若本地另有录屏，可替换后更新本说明中的文件名）。
 
 ---
 
-## 8. 总结
+## 八、现象与分析（简要）
 
-本实验使用 Taichi 实现了一个完整的「逐像素光线投射 + 最近交点深度测试 + Phong 着色 + 交互调参」的渲染流程。通过对球体与有限圆锥的隐式求交、法线计算和 Phong 三项分量叠加，能够直观观察材质参数对渲染结果的影响，并通过滑块实现实时交互。
+- **增大 Ka：** 整体底光抬升，暗部仍可见细节，画面趋「平」。  
+- **增大 Kd：** 漫反射增强，明暗随 $\mathbf{N}\cdot\mathbf{L}$ 变化更明显。  
+- **增大 Ks：** 镜面项变强，高光更亮。  
+- **增大 Shininess：** 高光更尖锐、范围更窄。
+
+---
+
+## 九、总结
+
+本实验在 Taichi 上实现了「射线生成 → 球与有限圆锥求交 → 最近表面选择 → Phong 三项叠加 → 交互调参」的完整链路，并针对 **中文路径 + Windows** 下的 GGUI 限制给出了 **Matplotlib 备用 UI**，保证实验可复现、可展示。后续可在同一框架上扩展 Blinn-Phong 或阴影射线等选做内容。
+
+---
+
+## 附录：文件说明
+
+| 文件 | 作用 |
+|------|------|
+| `phong_raytracing.py` | 主程序：求交、着色、UI 分支 |
+| `pyproject.toml` | 依赖与 Python 版本约束 |
+| `run_phong.bat` | Windows 一键运行 |
+| `demo.gif` | 效果演示（可选） |
+| `phong_preview.png` | 首次 Matplotlib 启动时自动保存的静态预览 |
