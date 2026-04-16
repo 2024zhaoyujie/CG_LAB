@@ -119,22 +119,33 @@ $$
 
 ### 5.3 法向量计算
 
-- **球面法线**：$\mathbf{N}=\mathrm{normalize}(\mathbf{P}-\mathbf{C})$
-- **圆锥侧壁法线**：对隐式函数  
+**球面法线**
 
 $$
-F(x',y',z')=x'^2+z'^2-k^2y'^2
+\mathbf{N}=\mathrm{normalize}(\mathbf{P}-\mathbf{C})
+$$
+
+**圆锥侧壁法线**
+
+对隐式函数（局部坐标中带撇的量为相对圆锥轴/顶点的表达；GitHub 公式里用 `\prime` 避免与 Markdown 引号冲突）：
+
+$$
+F(x^{\prime},y^{\prime},z^{\prime})=(x^{\prime})^2+(z^{\prime})^2-k^2(y^{\prime})^2
 $$
 
 使用梯度作为法向量：
 
 $$
-\nabla F=(2x',-2k^2y',2z')
+\nabla F=\left(2x^{\prime},\,-2k^2y^{\prime},\,2z^{\prime}\right)
 $$
 
-再归一化得到单位法向量。
+再对 $\nabla F$ 归一化得到单位法向量。
 
-- **圆锥底面法线**：$(0,-1,0)$
+**圆锥底面法线**
+
+$$
+(0,-1,0)
+$$
 
 此外，为了避免背面导致高光方向异常，若 $\mathbf{N}\cdot\mathbf{V}<0$ 则翻转法线（让法线朝向观察者）。
 
