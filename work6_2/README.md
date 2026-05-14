@@ -99,28 +99,19 @@ python -m src.Work6.main textured --steps 240 --image-size 224 --num-views 20 --
 - 输出目录：`outputs/work6/silhouette_20260512_183955`
 - 最终指标：`final_total=0.014295`，`final_silhouette=0.001479`
 
-结果展示：
+结果展示（精简为 5 张代表性图）：
 
 ![Silhouette Turntable](./outputs/work6/silhouette_20260512_183955/images/silhouette_turntable.gif)
 
-*图 1：Silhouette 任务最终 turntable 动图。*
+*图 1：黑白轮廓任务的最终 turntable 动图。*
 
-![Final RGB Compare](./outputs/work6/silhouette_20260512_183955/images/final_rgb_compare.png)
+![Silhouette Step 125](./outputs/work6/silhouette_20260512_183955/images/silhouette_step_0125.png)
 
-*图 2：最终重建结果与参考渲染对比。*
+*图 2：黑白轮廓中间阶段（step 125）。*
 
 ![Silhouette Loss Curve](./outputs/work6/silhouette_20260512_183955/plots/silhouette_losses.png)
 
 *图 3：Silhouette 训练损失曲线，整体稳定下降。*
-
-中间过程：
-
-![Silhouette Step 25](./outputs/work6/silhouette_20260512_183955/images/silhouette_step_0025.png)
-![Silhouette Step 75](./outputs/work6/silhouette_20260512_183955/images/silhouette_step_0075.png)
-![Silhouette Step 125](./outputs/work6/silhouette_20260512_183955/images/silhouette_step_0125.png)
-![Silhouette Step 180](./outputs/work6/silhouette_20260512_183955/images/silhouette_step_0180.png)
-
-*图 4：从球体逐步形变到目标轮廓。*
 
 分析：基础任务中轮廓损失显著下降，几何外形已能稳定逼近目标模型，说明软光栅化梯度与正则项配合有效。
 
@@ -129,28 +120,13 @@ python -m src.Work6.main textured --steps 240 --image-size 224 --num-views 20 --
 - 输出目录：`outputs/work6/textured_20260512_183217`
 - 最终指标：`final_total=0.012874`，`final_silhouette=0.000996`，`final_rgb=0.001962`
 
-结果展示：
-
 ![Textured Turntable](./outputs/work6/textured_20260512_183217/images/textured_turntable.gif)
 
-*图 5：Textured 任务最终 turntable 动图。*
-
-![Textured RGB Step 180](./outputs/work6/textured_20260512_183217/images/rgb_step_0180.png)
-
-*图 6：RGB 联合优化后的阶段性渲染结果。*
+*图 4：Textured 任务最终 turntable 动图。*
 
 ![Textured Loss Curve](./outputs/work6/textured_20260512_183217/plots/textured_losses.png)
 
-*图 7：联合优化损失曲线，silhouette 与 rgb 均逐步收敛。*
-
-中间过程：
-
-![Textured RGB Step 25](./outputs/work6/textured_20260512_183217/images/rgb_step_0025.png)
-![Textured RGB Step 75](./outputs/work6/textured_20260512_183217/images/rgb_step_0075.png)
-![Textured RGB Step 125](./outputs/work6/textured_20260512_183217/images/rgb_step_0125.png)
-![Textured RGB Step 175](./outputs/work6/textured_20260512_183217/images/rgb_step_0175.png)
-
-*图 8：颜色与几何联合收敛过程。*
+*图 5：联合优化损失曲线，silhouette 与 rgb 均逐步收敛。*
 
 分析：在保持轮廓精度的同时，RGB 误差持续下降，表明几何与外观协同优化有效；但该阶段训练耗时与显存开销明显上升。
 
