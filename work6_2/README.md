@@ -99,7 +99,7 @@ python -m src.Work6.main textured --steps 240 --image-size 224 --num-views 20 --
 - 输出目录：`outputs/work6/silhouette_20260512_183955`
 - 最终指标：`final_total=0.014295`，`final_silhouette=0.001479`
 
-结果展示（精简为 5 张代表性图）：
+结果展示：
 
 ![Silhouette Turntable](./outputs/work6/silhouette_20260512_183955/images/silhouette_turntable.gif)
 
