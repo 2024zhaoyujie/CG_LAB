@@ -150,11 +150,3 @@ python -m src.Work6.main textured --steps 240 --image-size 224 --num-views 20 --
 2. 正则项不仅提升视觉质量，也是避免优化崩坏的必要条件；
 3. RGB 联合监督可提升外观一致性，但需要更细致的权重与资源预算；
 4. 多视角监督和规范化输出流程有助于复现实验与结果对比。
-
-## 8. 提交清单
-
-- 代码：`src/Work6/*`
-- 依赖：`requirements_colab.txt`
-- 运行脚本：`run_colab.sh`
-- 结果：`outputs/work6/silhouette_20260512_183955`、`outputs/work6/textured_20260512_183217`
-- 报告：本 `README.md`
