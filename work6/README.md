@@ -1,5 +1,7 @@
 # 可微渲染（Differentiable Ray Casting）实验报告
 
+> 本文件为 **work6** 目录说明与实验报告，GitHub 默认在文件夹页展示 `README.md`。
+
 **课程**：计算机系统 / 图形学相关实验（请按实际课程名称修改）  
 **姓名**：________  
 **学号**：________  
@@ -157,5 +159,6 @@ python differentiable_raycasting_adam.py --extras --no-gui
 | `target_gt_optional_full.png` | 选做①+② GT |
 | `target_render.png` | 必做 GT（可与选做①对照） |
 | `requirements.txt` | Python 依赖 |
+| `README.md` | **实验报告**（本目录说明文档） |
 
 本目录对应课程仓库 [CG_LAB/work6](https://github.com/2024zhaoyujie/CG_LAB/tree/main/work6)。
