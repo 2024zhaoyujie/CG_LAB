@@ -1,0 +1,8 @@
+{
+  "mode": "silhouette",
+  "seed": 2026,
+  "steps": 220,
+  "final_total": 0.016203,
+  "final_silhouette": 0.001918,
+  "note": "demo metrics placeholder, replace with your actual run output"
+}

@@ -1,0 +1,7 @@
+numpy==1.26.4
+matplotlib>=3.7
+imageio>=2.34
+tqdm>=4.66
+fvcore>=0.1.5.post20221221
+iopath>=0.1.10
+scipy>=1.10

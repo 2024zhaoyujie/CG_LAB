@@ -1,0 +1,9 @@
+{
+  "mode": "textured",
+  "seed": 2027,
+  "steps": 240,
+  "final_total": 0.014891,
+  "final_silhouette": 0.001322,
+  "final_rgb": 0.002407,
+  "note": "demo metrics placeholder, replace with your actual run output"
+}
