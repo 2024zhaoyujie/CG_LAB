@@ -11,7 +11,7 @@
 1. 理解可微渲染的基本思想：**渲染图 → 误差 → 反向传播 → 更新场景参数** 的闭环。  
 2. 掌握基于 Taichi 的**正向光线投射**（ray casting）与球求交、法线、光照计算。  
 3. 使用 **`ti.ad.Tape`** 自动求导与 **Adam** 优化器，反传优化**光源位置**等参数。  
-4. 认识标准 \(\max(0, \mathbf{n}\cdot\mathbf{l})\) 在背光区域梯度消失的问题，采用 **Leaky Lambertian** 保证梯度可跨出“全暗区”。  
+4. 认识标准 $\max(0, \mathbf{n}\cdot\mathbf{l})$ 在背光区域梯度消失的问题，采用 **Leaky Lambertian** 保证梯度可跨出“全暗区”。  
 5. **（选做）** 联合优化**漫反射颜色**；将光照升级为 **Blinn–Phong** 并优化 **shininess**。
 
 ---
@@ -20,25 +20,25 @@
 
 ### 2.1 正向渲染
 
-对屏幕每个像素发射与 **+Z** 平行的射线，与半径 \(r=0.3\)、中心 \((0.5,0.5,0.5)\) 的球求最近交点，计算法线 \(\mathbf{n}\)，光源方向 \(\mathbf{l}\)，得到灰度强度写入图像。
+对屏幕每个像素发射与 **+Z** 平行的射线，与半径 $r=0.3$、中心 $(0.5,0.5,0.5)$ 的球求最近交点，计算法线 $\mathbf{n}$，光源方向 $\mathbf{l}$，得到灰度强度写入图像。
 
 ### 2.2 Leaky Lambertian
 
-采用泄漏漫反射，避免 \(\mathbf{n}\cdot\mathbf{l}\le 0\) 时被硬截断导致梯度为 0：
+采用泄漏漫反射，避免 $\mathbf{n}\cdot\mathbf{l}\le 0$ 时被硬截断导致梯度为 $0$：
 
-\[
+$$
 I = \max\left(\alpha\,(\mathbf{n}\cdot\mathbf{l}),\ \mathbf{n}\cdot\mathbf{l}\right),\quad \alpha=0.1
-\]
+$$
 
 损失函数为渲染图与目标图的 **MSE**；实现上与 Tape 兼容时，将像素误差与（选做时的）正则项写入同一前向核，满足反向模式对并行结构的要求。
 
 ### 2.3 优化
 
-使用 **`ti.ad.Tape(loss)`** 记录计算图，对可微参数反向传播；参数更新采用 **Adam**（动量与二阶矩校正）。**（选做）** 漫反射颜色对三色可引入对目标灰 \((0.85,0.85,0.85)\) 的正则项，使标量成像下 RGB 仍收敛到一致灰度。
+使用 **`ti.ad.Tape(loss)`** 记录计算图，对可微参数反向传播；参数更新采用 **Adam**（动量与二阶矩校正）。**（选做）** 漫反射颜色对三色可引入对目标灰 $(0.85,0.85,0.85)$ 的正则项，使标量成像下 RGB 仍收敛到一致灰度。
 
 ### 2.4 Blinn–Phong（选做）
 
-在 Leaky 漫反射基础上增加镜面项：半角向量 \(\mathbf{h}\)，\(n_h=\max(\mathbf{n}\cdot\mathbf{h},0)\)，镜面与 \(\mathbf{n}\cdot\mathbf{l}\) 的泄漏门控结合以保持可微性；**shininess** 作为可微标量与光源等一并优化。
+在 Leaky 漫反射基础上增加镜面项：半角向量 $\mathbf{h}$，$n_h=\max(\mathbf{n}\cdot\mathbf{h},0)$，镜面与 $\mathbf{n}\cdot\mathbf{l}$ 的泄漏门控结合以保持可微性；**shininess** 作为可微标量与光源等一并优化。
 
 ---
 
@@ -83,7 +83,7 @@ python differentiable_raycasting_adam.py --no-gui        # 仅终端与优化，
 
 #### 选做① 联合优化光源与漫反射颜色
 
-错误初值颜色在代码中设定，优化后向灰度 \((0.85,0.85,0.85)\) 与目标光源收敛。
+错误初值颜色在代码中设定，优化后向灰度 $(0.85,0.85,0.85)$ 与目标光源收敛。
 
 ```bash
 python differentiable_raycasting_adam.py --joint-color --no-gui
@@ -157,3 +157,5 @@ python differentiable_raycasting_adam.py --extras --no-gui
 | `README.md` | **实验报告**（本目录说明文档） |
 
 本目录对应课程仓库 [CG_LAB/work6](https://github.com/2024zhaoyujie/CG_LAB/tree/main/work6)。
+
+<!-- GitHub Markdown 数学：行内用单个 $...$，独立公式块用上下各一行的 $$...$$。参见 https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/writing-mathematical-expressions -->
