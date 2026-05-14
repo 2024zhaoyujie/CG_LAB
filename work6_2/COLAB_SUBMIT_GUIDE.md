@@ -28,7 +28,7 @@
 
 ## 4) 整理结果
 
-将 `outputs/work6/` 里的真实 run 目录复制到 `work6_2/outputs/work6/`，并删除 `*_demo` 目录。
+将 `outputs/work6/` 里的真实 run 目录复制到 `work6_2/outputs/work6/`，保持 `silhouette_时间戳` 与 `textured_时间戳` 命名。
 
 ## 5) 提交
 
